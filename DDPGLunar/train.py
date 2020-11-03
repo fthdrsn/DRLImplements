@@ -2,10 +2,11 @@ import numpy as np
 import argparse
 from collections import namedtuple
 from commonFunctions.UniformBuffer import UniformReplayBuffer
-from DQNAgent import DQNAgent
+from DDPGAgent import DQNAgent
 import gym
 from torch.utils.tensorboard import SummaryWriter
 Transition=namedtuple("Transitions","State Action Reward NextState Done")
+
 def main(args):
     env=gym.make(args.env)
     writer = SummaryWriter(comment="CartPole-v0-DQN")
@@ -47,8 +48,8 @@ def main(args):
 
 if __name__=="__main__":
 
-    parser = argparse.ArgumentParser(description='DQN Algo-FD')
-    parser.add_argument("--env", default="CartPole-v0", help="Training environment")
+    parser = argparse.ArgumentParser(description='DDPG Algo-FD')
+    parser.add_argument("--env", default="LunarLanderContinuous-v2", help="Training environment")
     parser.add_argument("--maxCapacity", type=int,default=1000, help="Maximum buffer capacity")
     parser.add_argument("--batchSize", type=int, default=16, help="Batch size for training")
     parser.add_argument("--maxStepCount", type=int, default=1000, help="Maximum step count in an episode")
