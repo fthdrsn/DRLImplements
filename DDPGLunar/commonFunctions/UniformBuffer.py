@@ -7,7 +7,7 @@ Transition=namedtuple("TRANSITIONS","States Actions Rewards NextStates Dones")
 
 class UniformReplayBuffer():
 
-    def __init__(self,bufferSize,stateShape,stateDType,actionDType):
+    def __init__(self,bufferSize,stateShape,actionShape,stateDType,actionDType):
 
         if not isinstance(stateShape, (tuple, list)):
             raise ValueError("Tuple or list expected for state shape")
@@ -17,7 +17,7 @@ class UniformReplayBuffer():
         self.bufferCapacity=bufferSize
         ## self.buffer namedtuple (states array, actions array,reward array,next states array,done array)
         self.buffer=Transition(np.zeros((bufferSize,*stateShape),stateDType),
-                               np.zeros((bufferSize, 1), actionDType),
+                               np.zeros((bufferSize, *actionShape), actionDType),
                                np.zeros((bufferSize, 1), np.float32),
                                np.zeros((bufferSize, *stateShape), stateDType),
                                np.zeros((bufferSize, 1), np.int8))

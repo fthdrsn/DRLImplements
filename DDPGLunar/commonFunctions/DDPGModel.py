@@ -27,6 +27,7 @@ class Actor(nn.Module):
         return x
 
 class Critic(nn.Module):
+
     def __init__(self,inputDim,outputDim,hiddenDim,actionDim):
         super().__init__()
         self.linear1State=nn.Linear(inputDim,hiddenDim)
