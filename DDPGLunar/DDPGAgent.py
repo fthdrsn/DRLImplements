@@ -6,18 +6,26 @@ import numpy as np
 from copy import  deepcopy
 
 class DDPGAgent():
-    def __init__(self,buffer,stateDim,actionDim,hiddenDim,args):
+    def __init__(self,buffer,stateDim,actionDim,hiddenDim,maxAction,args):
         self.stateDim=stateDim
+        self.maxAction=maxAction
         self.actionDim = actionDim
         self.hiddenDim = hiddenDim
         self.device=args.device
         self.lrPolicy=args.lrPolicy
         self.lrCritic = args.lrCritic
 
-        self.Actor=Actor(stateDim,actionDim,hiddenDim).to(self.device)
-        self.Critic = Critic(stateDim, actionDim, hiddenDim,actionDim).to(self.device)
-        self.targetActor=deepcopy(self.Actor)
-        self.targetCritic=deepcopy(self.Critic)
+        self.Actor=Actor(stateDim,actionDim,hiddenDim,maxAction).to(self.device)
+        self.Critic = Critic(stateDim, 1, hiddenDim,actionDim).to(self.device)
+        # self.Actor = Actor(stateDim, actionDim,maxAction).to(self.device)
+        # self.Critic = Critic(stateDim, actionDim).to(self.device)
+        # self.targetActor=deepcopy(self.Actor)
+        # self.targetCritic=deepcopy(self.Critic)
+        # self.targetActor.eval()
+        # self.targetCritic.eval()
+        self.targetActor = Actor(stateDim, actionDim, hiddenDim, maxAction).to(self.device)
+        self.targetCritic = Critic(stateDim, 1, hiddenDim, actionDim).to(self.device)
+
 
         self.optActor=optim.Adam(self.Actor.parameters(), lr=self.lrPolicy)
         self.optCritic = optim.Adam(self.Critic.parameters(), lr=self.lrCritic)
@@ -29,6 +37,7 @@ class DDPGAgent():
         self.targetUpdatePeriod=args.targetUpdatePeriod
         self.batchSize=args.batchSize
 
+        self.UpdateTargetNets()
     def GetAction(self,state):
         if len(state.shape)<2:
             state=state[np.newaxis,:]
@@ -58,24 +67,31 @@ class DDPGAgent():
         states=states.to(torch.float32)
         nextStates = nextStates.to(torch.float32)
         actions=actions.to(torch.float32)
+
+        self.optCritic.zero_grad()
+
         qCurrent=self.Critic(states,actions)
         with torch.no_grad():
             nextActions=self.targetActor(nextStates)
             qNext=self.targetCritic(nextStates,nextActions)
-        qTarget=rewards+self.gamma*qNext*(1-dones)
+            qTarget=rewards+self.gamma*qNext*(1-dones)
+
         criticLoss=self.criticLoss(qCurrent,qTarget)
+        criticLoss.backward()
+        self.optCritic.step()
+
+        for p in self.Critic.parameters():
+            p.requires_grad = False
 
         # Actor loss
-        policyLoss = -self.Critic(states, self.Actor(states).detach()).mean()
-
-        # update networks
         self.optActor.zero_grad()
+        policyLoss = -self.Critic(states, self.Actor(states)).mean()
+        # update networks
         policyLoss.backward()
         self.optActor.step()
 
-        self.optCritic.zero_grad()
-        criticLoss.backward()
-        self.optCritic.step()
+        for p in self.Critic.parameters():
+            p.requires_grad = True
 
         if stepCount%self.targetUpdatePeriod==0:
              self.UpdateTargetNets()

@@ -20,7 +20,7 @@ class UniformReplayBuffer():
                                np.zeros((bufferSize, *actionShape), actionDType),
                                np.zeros((bufferSize, 1), np.float32),
                                np.zeros((bufferSize, *stateShape), stateDType),
-                               np.zeros((bufferSize, 1), np.int8))
+                               np.zeros((bufferSize, 1), np.long))
 
     ##Push a transition. Transition is namedtuple(state,action,reward,nextstate,done)
     def push_transition(self,transition):
