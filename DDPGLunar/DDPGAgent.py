@@ -26,6 +26,12 @@ class DDPGAgent():
         self.targetActor = Actor(stateDim, actionDim, hiddenDim, maxAction).to(self.device)
         self.targetCritic = Critic(stateDim, 1, hiddenDim, actionDim).to(self.device)
 
+        for targetParam, param in zip(self.targetActor.parameters(), self.Actor.parameters()):
+            targetParam.data.copy_(param.data )
+
+        for targetParam, param in zip(self.targetCritic.parameters(), self.Critic.parameters()):
+            targetParam.data.copy_(param.data )
+
 
         self.optActor=optim.Adam(self.Actor.parameters(), lr=self.lrPolicy)
         self.optCritic = optim.Adam(self.Critic.parameters(), lr=self.lrCritic)
@@ -37,7 +43,7 @@ class DDPGAgent():
         self.targetUpdatePeriod=args.targetUpdatePeriod
         self.batchSize=args.batchSize
 
-        self.UpdateTargetNets()
+
     def GetAction(self,state):
         if len(state.shape)<2:
             state=state[np.newaxis,:]
