@@ -53,6 +53,11 @@ def main(args):
     totalPassedTime=0
     isSuccesfull=False
 
+    if saveResults:
+        writer.add_hparams({"lrPolicy": args.lrPolicy,"lrCritic": args.lrCritic,"batchSize":args.batchSize,"tau":args.tau,
+                            "hiddenDim":args.hiddenDim,"noiseTheta":args.theta,"noiseSigma":args.fixedSigma,"envName":args.env},
+                           {"lrPolicy": args.lrPolicy})
+
     for e in range(args.numberOfEpisode):
 
         state=env.reset()
@@ -90,13 +95,16 @@ def main(args):
         meanReward = float(np.mean(totalReward[-100:]))
 
         if saveResults and e%savePeriod==0:
-            writer.add_scalar("episodeReward"+runFor, episodeReward, stepCounter)
-            writer.add_scalar("meanReward"+runFor, meanReward, stepCounter)
-            writer.add_scalar("episodes"+runFor, e,stepCounter)
-            writer.add_scalar("episodeSteps" + runFor, episodeSteps,e)
-            writer.add_scalar("episodeTime" + runFor, episodeTime, e)
-            writer.add_scalar("episoderewardVsEpisode" + runFor,episodeReward, e)
-            writer.add_scalar("meanrewardVsEpisode" + runFor, meanReward, e)
+
+            ##Store datas w.r.t stepCounter
+            writer.add_scalar("STEPS/episodeReward"+runFor, episodeReward, stepCounter)
+            writer.add_scalar("STEPS/meanReward"+runFor, meanReward, stepCounter)
+            writer.add_scalar("STEPS/episodes"+runFor, e,stepCounter)
+            ##Store datas w.r.t episodes
+            writer.add_scalar("EPISODES/episodeSteps" + runFor, episodeSteps,e)
+            writer.add_scalar("EPISODES/episodeTime" + runFor, episodeTime, e)
+            writer.add_scalar("EPISODES/episodeReward" + runFor,episodeReward, e)
+            writer.add_scalar("EPISODES/meanReward" + runFor, meanReward, e)
 
         if debug:
             print("Eps:{} Steps:{} Mean Reward: {} Episode Reward: {} Episode Time: {}  IsDone: {}".format(e, stepCounter, meanReward, episodeReward,episodeTime,isDone))
@@ -109,11 +117,12 @@ def main(args):
                 SaveModel(ddpgAgent, e, stepCounter, episodeReward, "__DDPG__"+args.env, modelSavingPath)
             break
 
-    SaveModel(ddpgAgent, 100, stepCounter, 100, "__DDPG__" + args.env, modelSavingPath)
     ##If reached max episode count without expected  mean reward
     if not isSuccesfull:
         print("FAILURE!!!")
         print("Total Eps:{} Total Steps:{} Mean Reward: {} Total Time: {}".format(len(totalReward), stepCounter, meanReward,totalPassedTime))
+
+
 
 def SaveModel(agent,episode,stepCounter,episodeReward,saveName,savePath):
     if not os.path.exists(savePath):
@@ -121,12 +130,12 @@ def SaveModel(agent,episode,stepCounter,episodeReward,saveName,savePath):
     path = savePath + saveName +".dat"
     torch.save({
                 'steps': stepCounter,
-                'agentactor_state_dict': agent.Actor.state_dict(),
-                'agentcritic_state_dict': agent.Critic.state_dict(),
-                'opt_policy_state_dict': agent.optActor.state_dict(),
-                'opt_value_state_dict':agent.optCritic.state_dict(),
-                'epsisode_reward':episodeReward,
-                'epsisode': episode
+                'actorStateDict': agent.Actor.state_dict(),
+                'criticStateDict': agent.Critic.state_dict(),
+                'optPolicyStateDict': agent.optActor.state_dict(),
+                'optValueStateDict':agent.optCritic.state_dict(),
+                'episodeReward':episodeReward,
+                'episode': episode
                 }, path)
 
 def LoadModel(agent,loadPath):
@@ -136,17 +145,18 @@ def LoadModel(agent,loadPath):
     path = loadPath
     try:
         checkpoint = torch.load(path)
-        agent.Actor.load_state_dict(checkpoint['agentactor_state_dict'])
-        agent.Critic.load_state_dict(checkpoint['agentcritic_state_dict'])
-        agent.optActor.load_state_dict(checkpoint['opt_policy_state_dict'])
-        agent.optCritic.load_state_dict(checkpoint['opt_value_state_dict'])
+        agent.Actor.load_state_dict(checkpoint['actorStateDict'])
+        agent.Critic.load_state_dict(checkpoint['criticStateDict'])
+        agent.optActor.load_state_dict(checkpoint['optPolicyStateDict'])
+        agent.optCritic.load_state_dict(checkpoint['optValueStateDict'])
         steps = int(checkpoint['steps'])
-        if 'epsisode_reward' in checkpoint: reward = float(checkpoint['epsisode_reward'])
-        if 'epsisode' in checkpoint: reward = float(checkpoint['epsisode'])
+        if 'episodeReward' in checkpoint: reward = float(checkpoint['episodeReward'])
+        if 'episode' in checkpoint: reward = float(checkpoint['episode'])
 
     except FileNotFoundError:
-        print("checkpoint not found")
+        print("model not found")
     return steps,reward,episodes
+
 def str2bool(value):
     return value == "True"
 if __name__=="__main__":
@@ -167,7 +177,6 @@ if __name__=="__main__":
     parser.add_argument("--targetUpdatePeriod",type=int ,default=1, help="Update target at this period")
 
     parser.add_argument("--savePeriod", type=int, default=1, help="Save result every savePeriod of episodes ")
-
     ##Switches
     parser.add_argument("--debug", type=str2bool, default=True, help="Determines whether print episode results or not ")
     parser.add_argument("--saveModel", type=str2bool, default=True, help="Determines whether save model or not ")
