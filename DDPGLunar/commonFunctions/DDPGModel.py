@@ -4,35 +4,19 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-
-
-def fanin_init(size):
-    fanin =size[1] if len(size)>1 else size[0]
-    v = 1. / np.sqrt(fanin)
-    return torch.empty(size).uniform_(-v, v)
-
-
 class Actor(nn.Module):
-    def __init__(self, nb_states, nb_actions, hidden1, maxAction,init_w=3e-3):
+    def __init__(self, statesDim, actionDim, hidden1):
         super(Actor, self).__init__()
         hidden2=hidden1-100
-        self.fc1 = nn.Linear(nb_states, hidden1)
+        self.fc1 = nn.Linear(statesDim, hidden1)
         torch.nn.init.xavier_uniform_( self.fc1.weight)
         self.fc2 = nn.Linear(hidden1, hidden2)
         torch.nn.init.xavier_uniform_( self.fc2.weight)
-        self.fc3 = nn.Linear(hidden2, nb_actions)
+        self.fc3 = nn.Linear(hidden2, actionDim)
         torch.nn.init.xavier_uniform_( self.fc3.weight)
         self.relu = nn.ReLU()
         self.tanh = nn.Tanh()
-        # self.init_weights(init_w)
-        self.maxAction=maxAction
 
-    def init_weights(self, init_w):
-
-            self.fc1.weight.data = fanin_init(self.fc1.weight.data.size())
-            self.fc1.bias.data = fanin_init(self.fc1.bias.data.size())
-            self.fc2.weight.data = fanin_init(self.fc2.weight.data.size())
-            self.fc3.weight.data.uniform_(-init_w, init_w)
 
     def forward(self, x):
         out = self.fc1(x)
@@ -41,32 +25,25 @@ class Actor(nn.Module):
         out = self.relu(out)
         out = self.fc3(out)
         out = self.tanh(out)
-        return out*self.maxAction
+        return out
 
 
 class Critic(nn.Module):
-    def __init__(self, nb_states,outputdim, hidden1, nb_actions,init_w=3e-3):
+    def __init__(self, statesDim,outputdim, hidden1, actionDim):
         super(Critic, self).__init__()
         hidden2=hidden1-100
-        self.fc1 = nn.Linear(nb_states, hidden1)
+        self.fc1 = nn.Linear(statesDim, hidden1)
         torch.nn.init.xavier_uniform_(self.fc1.weight)
-        self.fc2 = nn.Linear(hidden1 + nb_actions, hidden2)
+        self.fc2 = nn.Linear(hidden1 + actionDim, hidden2)
         torch.nn.init.xavier_uniform_(self.fc2.weight)
-        self.fc3 = nn.Linear(hidden2, 1)
+        self.fc3 = nn.Linear(hidden2, outputdim)
         torch.nn.init.xavier_uniform_(self.fc3.weight)
         self.relu = nn.ReLU()
-        # self.init_weights(init_w)
-
-    def init_weights(self, init_w):
-        self.fc1.weight.data = fanin_init(self.fc1.weight.data.shape)
-        self.fc2.weight.data = fanin_init(self.fc2.weight.data.size())
-        self.fc3.weight.data.uniform_(-init_w, init_w)
-
+ 
     def forward(self, x,a):
 
         out = self.fc1(x)
         out = self.relu(out)
-        # debug()
         out = self.fc2(torch.cat([out, a], 1))
         out = self.relu(out)
         out = self.fc3(out)

@@ -11,23 +11,19 @@ class DDPGAgent():
         self.maxAction=maxAction
         self.actionDim = actionDim
         self.hiddenDim = hiddenDim
+        self.outputDim=1
         self.device=args.device
         self.lrPolicy=args.lrPolicy
         self.lrCritic = args.lrCritic
 
-        self.Actor=Actor(stateDim,actionDim,hiddenDim,maxAction).to(self.device)
-        self.Critic = Critic(stateDim, 1, hiddenDim,actionDim).to(self.device)
-        # self.Actor = Actor(stateDim, actionDim,maxAction).to(self.device)
-        # self.Critic = Critic(stateDim, actionDim).to(self.device)
-        # self.targetActor=deepcopy(self.Actor)
-        # self.targetCritic=deepcopy(self.Critic)
-        # self.targetActor.eval()
-        # self.targetCritic.eval()
-        self.targetActor = Actor(stateDim, actionDim, hiddenDim, maxAction).to(self.device)
-        self.targetCritic = Critic(stateDim, 1, hiddenDim, actionDim).to(self.device)
+        self.Actor=Actor(stateDim,actionDim,hiddenDim).to(self.device)
+        self.Critic = Critic(stateDim, self.outputDim, hiddenDim,actionDim).to(self.device)
+
+        self.targetActor = Actor(stateDim, actionDim, hiddenDim).to(self.device)
+        self.targetCritic = Critic(stateDim, self.outputDim, hiddenDim, actionDim).to(self.device)
 
         for targetParam, param in zip(self.targetActor.parameters(), self.Actor.parameters()):
-            targetParam.data.copy_(param.data )
+            targetParam.data.copy_(param.data)
 
         for targetParam, param in zip(self.targetCritic.parameters(), self.Critic.parameters()):
             targetParam.data.copy_(param.data )
@@ -52,7 +48,8 @@ class DDPGAgent():
 
         with torch.no_grad():
             stateTensor = torch.from_numpy(state).to(torch.float32).to(self.device)
-            action = self.Actor(stateTensor).cpu().numpy()[0]
+            a=self.Actor(stateTensor).cpu().numpy()
+            action = self.Actor(stateTensor).cpu().numpy()[0]*self.maxAction
 
         self.Actor.train()
         return action
@@ -85,14 +82,12 @@ class DDPGAgent():
         criticLoss=self.criticLoss(qCurrent,qTarget)
         criticLoss.backward()
         self.optCritic.step()
-
+        #Doesn't calculate gradients w.r.t critic net parameters when updating policy
         for p in self.Critic.parameters():
             p.requires_grad = False
 
-        # Actor loss
         self.optActor.zero_grad()
         policyLoss = -self.Critic(states, self.Actor(states)).mean()
-        # update networks
         policyLoss.backward()
         self.optActor.step()
 

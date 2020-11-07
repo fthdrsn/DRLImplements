@@ -10,11 +10,12 @@ import numpy.random as nr
 
 class OUNoise:
     """docstring for OUNoise"""
-    def __init__(self,action_dimension,mu=0, theta=0.15, sigma=0.2):
+    def __init__(self,action_dimension,args):
+
         self.action_dimension = action_dimension
-        self.mu = mu
-        self.theta = theta
-        self.sigma = sigma
+        self.mu = args.mu
+        self.theta = args.theta
+        self.sigma = args.fixedSigma
         self.state = np.ones(self.action_dimension) * self.mu
         self.reset()
 
