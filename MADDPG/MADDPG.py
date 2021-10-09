@@ -5,7 +5,7 @@ import torch
 import numpy as np
 from copy import  deepcopy
 
-class DDPGAgent():
+class MADDPGAgent():
     def __init__(self,buffer,stateDim,actionDim,hiddenDim,maxAction,args):
         self.stateDim=stateDim
         self.maxAction=maxAction
@@ -87,7 +87,6 @@ class DDPGAgent():
             p.requires_grad = False
 
         self.optActor.zero_grad()
-    
         policyLoss = -self.Critic(states, self.Actor(states)).mean()
         policyLoss.backward()
         self.optActor.step()
@@ -97,7 +96,3 @@ class DDPGAgent():
 
         if stepCount%self.targetUpdatePeriod==0:
              self.UpdateTargetNets()
-
-
-
-
